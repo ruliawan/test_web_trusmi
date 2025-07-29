@@ -1,60 +1,79 @@
-# CodeIgniter 4 Framework
+# 📊 Test Web Trusmi
 
-## What is CodeIgniter?
+Untuk test ini saya menggunakan framework [CodeIgniter 4](https://codeigniter.com/) dengan frontend modern menggunakan:
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+- [Chart.js](https://www.chartjs.org/) — untuk visualisasi grafik
+- [Bootstrap](https://getbootstrap.com/) — untuk styling responsif
+- [jQuery](https://jquery.com/) — untuk DOM & interaktivitas
+- Semua library frontend dikelola dengan **NPM**
 
-This repository holds the distributable version of the framework.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+---
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## ✅ Prasyarat
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+Sebelum menjalankan project ini, pastikan sudah meng-install:
 
-## Important Change with index.php
+- PHP 7.4 atau lebih baru
+- Composer
+- Node.js & NPM
+- MySQL / MariaDB (untuk database)
+- Web server (Apache/Nginx) atau bisa gunakan `php spark serve`
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+---
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## 🚀 Langkah Menjalankan Project
 
-**Please** read the user guide for a better explanation of how CI4 works!
+### 1. Clone Repository
 
-## Repository Management
+```bash
+git clone https://github.com/ruliawan/test_web_trusmi.git
+cd test_web_trusmi
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+### 2. Clone Repository
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+```bash
+composer install
 
-## Contributing
+### 3. Clone Repository
 
-We welcome contributions from the community.
+```bash
+npm install
 
-Please read the [*Contributing to CodeIgniter*](https://github.com/codeigniter4/CodeIgniter4/blob/develop/CONTRIBUTING.md) section in the development repository.
+### 4. Compile Asset Frontend
 
-## Server Requirements
+```bash
+npm run dev   # untuk development
+# atau
+npm run build # untuk production
+Pastikan file hasil build masuk ke folder public/assets atau folder tujuan yang telah kamu atur di config.
 
-PHP version 8.1 or higher is required, with the following extensions installed:
+### 5. Konfigurasi Database
+Buka file app/Config/Database.php, lalu edit bagian berikut:
+```bash
+public $default = [
+    'DSN'      => '',
+    'hostname' => 'localhost',
+    'username' => 'root',
+    'password' => '',
+    'database' => 'nama_database',
+    'DBDriver' => 'MySQLi',
+    'DBPrefix' => '',
+    'pConnect' => false,
+    'DBDebug'  => (ENVIRONMENT !== 'production'),
+    'cacheOn'  => false,
+    'cacheDir' => '',
+    'charset'  => 'utf8',
+    'DBCollat' => 'utf8_general_ci',
+    'swapPre'  => '',
+    'encrypt'  => false,
+    'compress' => false,
+    'strictOn' => false,
+    'failover' => [],
+    'port'     => 3306,
+];
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+### 6. Jalankan Server
+```bash
+php spark serve
+Akses melalui:
+http://localhost:8080
