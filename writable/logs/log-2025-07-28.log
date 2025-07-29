@@ -1,0 +1,714 @@
+ERROR - 2025-07-28 10:44:24 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:44:24 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            COUNT(*) AS target,
+                            COUNT(*) AS actual,
+                            SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                        FROM table_kpi_marketing
+                        GROUP BY karyawan, kpi
+                    ),
+                    scored AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            target,
+                            actual,
+                            ROUND(100.0 * actual / target) AS pencapaian_persen,
+                            CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                            late,
+                            ROUND(((actual / target) * CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100) + (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)) AS skor_total_bobot
+                        FROM base
+                    ),
+                    pivot AS (
+                        SELECT
+                            k1.karyawan AS nama_karyawan,
+
+                            -- SALES
+                            k1.target AS sales_target,
+                            k1.actual AS sales_actual,
+                            CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                            CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                            k1.late AS sales_jumlah_late,
+                            CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                            -- REPORT
+                            k2.target AS report_target,
+                            k2.actual AS report_actual,
+                            CONCAT(k2.pencapaian_persen, \'%\') AS report_pencapaian,
+                            CONCAT(k2.bobot_kpi, \'%\') AS report_bobot_kpi,
+                            k2.late AS report_jumlah_late,
+                            CONCAT(k2.skor_total_bobot, \'%\') AS report_total_bobot,
+
+                            -- TOTAL KPI
+                            CONCAT(ROUND(k1.skor_total_bobot + k2.skor_total_bobot), \'%\') AS total_kpi_score
+                        FROM scored k1
+                        LEFT JOIN scored k2 ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                        WHERE k1.kpi = \'Sales\'
+                    )
+
+                    SELECT * FROM pivot
+                    ORDER BY total_kpi_score DESC')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 10:45:51 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:45:51 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: dashboard/get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            COUNT(*) AS target,
+                            COUNT(*) AS actual,
+                            SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                        FROM table_kpi_marketing
+                        GROUP BY karyawan, kpi
+                    ),
+                    scored AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            target,
+                            actual,
+                            ROUND(100.0 * actual / target) AS pencapaian_persen,
+                            CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                            late,
+                            ROUND(((actual / target) * CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100) + (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)) AS skor_total_bobot
+                        FROM base
+                    ),
+                    pivot AS (
+                        SELECT
+                            k1.karyawan AS nama_karyawan,
+
+                            -- SALES
+                            k1.target AS sales_target,
+                            k1.actual AS sales_actual,
+                            CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                            CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                            k1.late AS sales_jumlah_late,
+                            CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                            -- REPORT
+                            k2.target AS report_target,
+                            k2.actual AS report_actual,
+                            CONCAT(k2.pencapaian_persen, \'%\') AS report_pencapaian,
+                            CONCAT(k2.bobot_kpi, \'%\') AS report_bobot_kpi,
+                            k2.late AS report_jumlah_late,
+                            CONCAT(k2.skor_total_bobot, \'%\') AS report_total_bobot,
+
+                            -- TOTAL KPI
+                            CONCAT(ROUND(k1.skor_total_bobot + k2.skor_total_bobot), \'%\') AS total_kpi_score
+                        FROM scored k1
+                        LEFT JOIN scored k2 ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                        WHERE k1.kpi = \'Sales\'
+                    )
+
+                    SELECT * FROM pivot
+                    ORDER BY total_kpi_score DESC')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 10:47:50 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:47:50 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            COUNT(*) AS target,
+                            COUNT(*) AS actual,
+                            SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                        FROM table_kpi_marketing
+                        GROUP BY karyawan, kpi
+                    ),
+                    scored AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            target,
+                            actual,
+                            ROUND(100.0 * actual / target) AS pencapaian_persen,
+                            CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                            late,
+                            ROUND(((actual / target) * CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100) + (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)) AS skor_total_bobot
+                        FROM base
+                    ),
+                    pivot AS (
+                        SELECT
+                            k1.karyawan AS nama_karyawan,
+
+                            -- SALES
+                            k1.target AS sales_target,
+                            k1.actual AS sales_actual,
+                            CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                            CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                            k1.late AS sales_jumlah_late,
+                            CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                            -- REPORT
+                            k2.target AS report_target,
+                            k2.actual AS report_actual,
+                            CONCAT(k2.pencapaian_persen, \'%\') AS report_pencapaian,
+                            CONCAT(k2.bobot_kpi, \'%\') AS report_bobot_kpi,
+                            k2.late AS report_jumlah_late,
+                            CONCAT(k2.skor_total_bobot, \'%\') AS report_total_bobot,
+
+                            -- TOTAL KPI
+                            CONCAT(ROUND(k1.skor_total_bobot + k2.skor_total_bobot), \'%\') AS total_kpi_score
+                        FROM scored k1
+                        LEFT JOIN scored k2 ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                        WHERE k1.kpi = \'Sales\'
+                    )
+
+                    SELECT * FROM pivot
+                    ORDER BY total_kpi_score DESC')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 10:48:29 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:48:29 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            COUNT(*) AS target,
+                            COUNT(*) AS actual,
+                            SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                        FROM table_kpi_marketing
+                        GROUP BY karyawan, kpi
+                    ),
+                    scored AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            target,
+                            actual,
+                            ROUND(100.0 * actual / target) AS pencapaian_persen,
+                            CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                            late,
+                            ROUND(((actual / target) * CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100) + (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)) AS skor_total_bobot
+                        FROM base
+                    ),
+                    pivot AS (
+                        SELECT
+                            k1.karyawan AS nama_karyawan,
+
+                            -- SALES
+                            k1.target AS sales_target,
+                            k1.actual AS sales_actual,
+                            CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                            CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                            k1.late AS sales_jumlah_late,
+                            CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                            -- REPORT
+                            k2.target AS report_target,
+                            k2.actual AS report_actual,
+                            CONCAT(k2.pencapaian_persen, \'%\') AS report_pencapaian,
+                            CONCAT(k2.bobot_kpi, \'%\') AS report_bobot_kpi,
+                            k2.late AS report_jumlah_late,
+                            CONCAT(k2.skor_total_bobot, \'%\') AS report_total_bobot,
+
+                            -- TOTAL KPI
+                            CONCAT(ROUND(k1.skor_total_bobot + k2.skor_total_bobot), \'%\') AS total_kpi_score
+                        FROM scored k1
+                        LEFT JOIN scored k2 ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                        WHERE k1.kpi = \'Sales\'
+                    )
+
+                    SELECT * FROM pivot
+                    ORDER BY total_kpi_score DESC')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 10:49:16 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (\n...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:49:16 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(17): CodeIgniter\Database\BaseConnection->query('WITH base AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            COUNT(*) AS target,
+                            COUNT(*) AS actual,
+                            SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                        FROM table_kpi_marketing
+                        GROUP BY karyawan, kpi
+                    ),
+                    scored AS (
+                        SELECT 
+                            karyawan,
+                            kpi,
+                            target,
+                            actual,
+                            ROUND(100.0 * actual / target) AS pencapaian_persen,
+                            CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                            late,
+                            ROUND(((actual / target) * CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100) + (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)) AS skor_total_bobot
+                        FROM base
+                    ),
+                    pivot AS (
+                        SELECT
+                            k1.karyawan AS nama_karyawan,
+
+                            -- SALES
+                            k1.target AS sales_target,
+                            k1.actual AS sales_actual,
+                            CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                            CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                            k1.late AS sales_jumlah_late,
+                            CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                            -- REPORT
+                            k2.target AS report_target,
+                            k2.actual AS report_actual,
+                            CONCAT(k2.pencapaian_persen, \'%\') AS report_pencapaian,
+                            CONCAT(k2.bobot_kpi, \'%\') AS report_bobot_kpi,
+                            k2.late AS report_jumlah_late,
+                            CONCAT(k2.skor_total_bobot, \'%\') AS report_total_bobot,
+
+                            -- TOTAL KPI
+                            CONCAT(ROUND(k1.skor_total_bobot + k2.skor_total_bobot), \'%\') AS total_kpi_score
+                        FROM scored k1
+                        LEFT JOIN scored k2 ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                        WHERE k1.kpi = \'Sales\'
+                    )
+
+                    SELECT * FROM pivot
+                    ORDER BY total_kpi_score DESC')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 10:50:55 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT \n       ...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT \n       ...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 10:50:55 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_percentage_ontime]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT 
+                `karyawan`,
+                COUNT(*) AS total_task,
+                SUM(CASE WHEN `aktual` <= `deadline` THEN 1 ELSE 0 END) AS total_ontime,
+                SUM(CASE WHEN `aktual` > `deadline` THEN 1 ELSE 0 END) AS total_late,
+                CONCAT(ROUND(100.0 * SUM(CASE WHEN aktual <= deadline THEN 1 ELSE 0 END) / COUNT(*)), \'%\') AS persentase_ontime,
+                CONCAT(ROUND(100.0 * SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) / COUNT(*)), \'%\') AS persentase_late
+                FROM `table_kpi_marketing`
+                GROUP BY `karyawan`
+                ORDER BY `karyawan`')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 11:02:00 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT \n       ...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT \n       ...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 11:02:00 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_percentage_ontime]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(74): CodeIgniter\Database\BaseConnection->query('SELECT 
+                `karyawan`,
+                COUNT(*) AS total_task,
+                SUM(CASE WHEN `aktual` <= `deadline` THEN 1 ELSE 0 END) AS total_ontime,
+                SUM(CASE WHEN `aktual` > `deadline` THEN 1 ELSE 0 END) AS total_late,
+                CONCAT(ROUND(100.0 * SUM(CASE WHEN aktual <= deadline THEN 1 ELSE 0 END) / COUNT(*)), \'%\') AS persentase_ontime,
+                CONCAT(ROUND(100.0 * SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) / COUNT(*)), \'%\') AS persentase_late
+                FROM `table_kpi_marketing`
+                GROUP BY `karyawan`
+                ORDER BY `karyawan`')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 11:06:29 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(18): CodeIgniter\Database\BaseConnection->query('\n            WI...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(18): CodeIgniter\Database\BaseConnection->query('\n            WI...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 11:06:29 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_kpi]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(18): CodeIgniter\Database\BaseConnection->query('
+            WITH base AS (
+                SELECT 
+                    karyawan,
+                    kpi,
+                    COUNT(*) AS target,
+                    COUNT(*) AS actual,
+                    SUM(CASE WHEN aktual > deadline THEN 1 ELSE 0 END) AS late
+                FROM table_kpi_marketing
+                GROUP BY karyawan, kpi
+            ),
+            scored AS (
+                SELECT 
+                    karyawan,
+                    kpi,
+                    target,
+                    actual,
+                    ROUND(CASE WHEN target = 0 THEN 0 ELSE 100.0 * actual / target END) AS pencapaian_persen,
+                    CASE WHEN kpi = \'Sales\' THEN 50 WHEN kpi = \'Report\' THEN 50 END AS bobot_kpi,
+                    late,
+                    ROUND(
+                        (CASE WHEN target = 0 THEN 0 ELSE (actual / target) END * 
+                            CASE WHEN kpi = \'Sales\' THEN 0.5 WHEN kpi = \'Report\' THEN 0.5 END * 100
+                        ) + 
+                        (CASE WHEN kpi = \'Sales\' THEN late * -7 WHEN kpi = \'Report\' THEN late * -5 END)
+                    ) AS skor_total_bobot
+                FROM base
+            ),
+            pivot AS (
+                SELECT
+                    k1.karyawan AS nama_karyawan,
+
+                    -- SALES
+                    k1.target AS sales_target,
+                    k1.actual AS sales_actual,
+                    CONCAT(k1.pencapaian_persen, \'%\') AS sales_pencapaian,
+                    CONCAT(k1.bobot_kpi, \'%\') AS sales_bobot_kpi,
+                    k1.late AS sales_jumlah_late,
+                    CONCAT(k1.skor_total_bobot, \'%\') AS sales_total_bobot,
+
+                    -- REPORT
+                    k2.target AS report_target,
+                    k2.actual AS report_actual,
+                    CONCAT(COALESCE(k2.pencapaian_persen, 0), \'%\') AS report_pencapaian,
+                    CONCAT(COALESCE(k2.bobot_kpi, 0), \'%\') AS report_bobot_kpi,
+                    COALESCE(k2.late, 0) AS report_jumlah_late,
+                    CONCAT(COALESCE(k2.skor_total_bobot, 0), \'%\') AS report_total_bobot,
+
+                    -- TOTAL KPI
+                    (COALESCE(k1.skor_total_bobot, 0) + COALESCE(k2.skor_total_bobot, 0)) AS total_kpi_score
+                FROM scored k1
+                LEFT JOIN scored k2 
+                    ON k1.karyawan = k2.karyawan AND k2.kpi = \'Report\'
+                WHERE k1.kpi = \'Sales\'
+            )
+
+            SELECT * FROM pivot
+            ORDER BY total_kpi_score DESC
+        ')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_kpi()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
+ERROR - 2025-07-28 11:09:27 --> Error connecting to the database: mysqli_sql_exception: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:201
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php(201): mysqli->real_connect('localhost', '', Object(SensitiveParameterValue), '', 3306, '', 0)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#3 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(85): CodeIgniter\Database\BaseConnection->query('\n            SE...')
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#6 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#8 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#9 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#10 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#11 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user ''@'localhost' (using password: NO) in C:\xampp\htdocs\test_trusmi\system\Database\MySQLi\Connection.php:246
+Stack trace:
+#0 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(419): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 C:\xampp\htdocs\test_trusmi\system\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+#2 C:\xampp\htdocs\test_trusmi\app\Controllers\Dashboard.php(85): CodeIgniter\Database\BaseConnection->query('\n            SE...')
+#3 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+#4 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+#5 C:\xampp\htdocs\test_trusmi\system\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#6 C:\xampp\htdocs\test_trusmi\system\Boot.php(363): CodeIgniter\CodeIgniter->run()
+#7 C:\xampp\htdocs\test_trusmi\system\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#8 C:\xampp\htdocs\test_trusmi\public\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#9 C:\xampp\htdocs\test_trusmi\system\rewrite.php(44): require_once('C:\\xampp\\htdocs...')
+#10 {main}
+CRITICAL - 2025-07-28 11:09:28 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user ''@'localhost' (using password: NO)
+[Method: GET, Route: get_percentage_ontime]
+in SYSTEMPATH\Database\BaseConnection.php on line 465.
+ 1 SYSTEMPATH\Database\BaseConnection.php(614): CodeIgniter\Database\BaseConnection->initialize()
+ 2 APPPATH\Controllers\Dashboard.php(85): CodeIgniter\Database\BaseConnection->query('
+            SELECT 
+                `karyawan`,
+                COUNT(*) AS total_task,
+                SUM(CASE WHEN `aktual` <= `deadline` THEN 1 ELSE 0 END) AS total_ontime,
+                SUM(CASE WHEN `aktual` > `deadline` THEN 1 ELSE 0 END) AS total_late,
+                CONCAT(ROUND(
+                    CASE 
+                        WHEN COUNT(*) = 0 THEN 0
+                        ELSE 100.0 * SUM(CASE WHEN `aktual` <= `deadline` THEN 1 ELSE 0 END) / COUNT(*) 
+                    END, 2), \'%\') AS persentase_ontime,
+                CONCAT(ROUND(
+                    CASE 
+                        WHEN COUNT(*) = 0 THEN 0
+                        ELSE 100.0 * SUM(CASE WHEN `aktual` > `deadline` THEN 1 ELSE 0 END) / COUNT(*) 
+                    END, 2), \'%\') AS persentase_late
+            FROM `table_kpi_marketing`
+            GROUP BY `karyawan`
+            ORDER BY `karyawan`
+        ')
+ 3 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Dashboard->get_percentage_ontime()
+ 4 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Dashboard))
+ 5 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 6 SYSTEMPATH\Boot.php(363): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 8 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ 9 SYSTEMPATH\rewrite.php(44): require_once('C:\\xampp\\htdocs\\test_trusmi\\public\\index.php')
