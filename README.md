@@ -28,16 +28,19 @@ Sebelum menjalankan project ini, pastikan sudah meng-install:
 ```bash
 git clone https://github.com/ruliawan/test_web_trusmi.git
 cd test_web_trusmi
+```
 
 ### 2. Clone Repository
 
 ```bash
 composer install
+```
 
 ### 3. Clone Repository
 
 ```bash
 npm install
+```
 
 ### 4. Compile Asset Frontend
 
@@ -45,6 +48,7 @@ npm install
 npm run dev   # untuk development
 # atau
 npm run build # untuk production
+```
 Pastikan file hasil build masuk ke folder public/assets atau folder tujuan yang telah kamu atur di config.
 
 ### 5. Konfigurasi Database
@@ -71,9 +75,11 @@ public $default = [
     'failover' => [],
     'port'     => 3306,
 ];
+```
 
 ### 6. Jalankan Server
 ```bash
 php spark serve
 Akses melalui:
 http://localhost:8080
+```
